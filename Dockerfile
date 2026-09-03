@@ -25,8 +25,8 @@ COPY pyproject.toml README.md ./
 COPY src/aura/__init__.py src/aura/config.py ./src/aura/
 RUN pip install --no-cache-dir -e ".${EXTRAS}"
 
+# src/ carries the packaged web UI at src/aura/web.
 COPY src/ ./src/
-COPY web/ ./web/
 
 # Run unprivileged.
 RUN useradd --create-home --uid 10001 aura && chown -R aura:aura /app

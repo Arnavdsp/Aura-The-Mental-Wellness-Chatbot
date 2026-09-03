@@ -126,12 +126,13 @@ src/aura/
 │   ├── vision.py      # validate, strip EXIF, downscale
 │   └── audio_io.py    # decode/encode/resample (pure-Python WAV path)
 ├── api/               # FastAPI app, routes, dependencies
-└── training/
-    ├── data.py        # preference-pair construction
-    ├── train.py       # DPO (primary) and SFT (fallback)
-    └── evaluate.py    # behavioural scoring
-web/                   # index.html · styles.css · app.js  (no build step)
-tests/                 # 119 tests, no GPU, no network
+├── training/
+│   ├── data.py        # preference-pair construction
+│   ├── train.py       # DPO (primary) and SFT (fallback)
+│   └── evaluate.py    # behavioural scoring
+└── web/               # index.html · styles.css · app.js (no build step)
+api/index.py           # Vercel serverless entrypoint
+tests/                 # 122 tests, no GPU, no network
 notebooks/             # the original exploration notebooks
 ```
 </details>
@@ -273,6 +274,55 @@ curl -X POST localhost:8000/api/chat \
   -H 'content-type: application/json' \
   -d '{"message":"I have been feeling overwhelmed at work lately"}'
 ```
+
+---
+
+## Deploying
+
+The app ships its UI inside the Python package, so any install serves the full
+interface — no build step, no separate static host.
+
+### Where the real thing runs
+
+Gemma 3n needs an accelerator. Anywhere with a GPU works:
+
+```bash
+docker build --build-arg EXTRAS='[ml]' -t aura:gpu .
+docker run --gpus all -p 8000:8000 -e AURA_ENGINE=gemma aura:gpu
+```
+
+Hugging Face Spaces (GPU), Modal, Fly.io GPU machines, Cloud Run with GPU and a
+plain GPU VM all take this image as-is. Mount a volume at
+`/home/aura/.cache/huggingface` so weights survive restarts.
+
+### Vercel
+
+Vercel deploys, and it is genuinely useful for showing the interface — but be
+clear about what it can and cannot run:
+
+```bash
+vercel deploy      # entrypoint: api/index.py, config: vercel.json
+```
+
+**It runs the echo engine, not Gemma 3n.** A serverless bundle cannot hold
+PyTorch and there is no GPU, so what you get is the reflective fallback coach
+described under [Engines](#engines) — the real UI and API, with a much simpler
+mind behind them. `vercel.json` pins `AURA_ENGINE=echo` so this is explicit
+rather than a surprise at runtime.
+
+Three further limits follow from serverless, and none of them are bugs:
+
+| Limit | Effect |
+|---|---|
+| Instances are ephemeral and not shared | Sessions live in process memory, so conversation history, the topic graph and the mood trend survive only while an instance stays warm. Uploads are worse: staging a file and sending the message are two requests, so an image or voice note can land on an instance that never sees the follow-up. |
+| No `ffmpeg` in the runtime | Browser voice notes arrive as WebM/Opus and cannot be decoded, so `AURA_ASR_BACKEND=none`. Plain WAV still decodes. |
+| TTS needs torch | Spoken replies are off (`AURA_TTS_BACKEND=none`). |
+
+If you want a Vercel deployment that holds a real conversation, the session
+store is the thing to replace — `SessionStore` is deliberately narrow
+(`get_or_create` / `get` / `delete` plus blob helpers) so a Redis or Vercel KV
+implementation drops in behind it without touching any caller. That is the one
+change standing between this and a stateless-friendly deployment.
 
 ---
 

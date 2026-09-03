@@ -76,6 +76,16 @@ Repository = "https://github.com/arnavdsp/Gemma-3n-Hackathon"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# The web UI ships inside the package, so `pip install` produces a working app
+# rather than an API with a silently missing front end.
+[tool.setuptools.package-data]
+aura = ["web/*.html", "web/*.css", "web/*.js", "web/**/*"]
+
+# Vercel looks for the ASGI app here; the package layout is not one of its
+# default entrypoint locations.
+[tool.vercel]
+entrypoint = "aura.api.app:app"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="description" content="Aura — a multimodal wellness coach powered by Gemma 3n. Talk, type, or share an image." />
+<meta name="theme-color" content="#f6f4f1" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#12151a" media="(prefers-color-scheme: dark)" />
+<title>Aura — Wellness Coach</title>
+<link rel="stylesheet" href="/assets/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%237c9885' stroke-width='2.5'/><circle cx='16' cy='16' r='5' fill='%237c9885'/></svg>" />
+</head>
+<body>
+<a class="skip-link" href="#composer-input">Skip to the message box</a>
+
+<div class="app" id="app">
+
+  <!-- ─── Header ─────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26">
+          <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".35"/>
+          <circle class="brand__pulse" cx="16" cy="16" r="5.5" fill="currentColor"/>
+        </svg>
+      </span>
+      <div class="brand__text">
+        <h1>Aura</h1>
+        <p>Wellness coach · Gemma 3n</p>
+      </div>
+    </div>
+
+    <div class="topbar__actions">
+      <span class="status" id="status" title="Backend status">
+        <span class="status__dot" data-state="pending"></span>
+        <span class="status__label">connecting</span>
+      </span>
+      <button class="iconbtn" id="insights-toggle" aria-expanded="false" aria-controls="insights"
+              title="Session insights">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="sr-only">Toggle session insights</span>
+      </button>
+      <button class="iconbtn" id="theme-toggle" title="Switch theme">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" class="icon-sun"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" class="icon-moon"><path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" fill="currentColor"/></svg>
+        <span class="sr-only">Switch colour theme</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Crisis banner ──────────────────────────────────────── -->
+  <div class="crisis" id="crisis" hidden role="alert">
+    <div class="crisis__inner">
+      <strong>You don't have to handle this alone.</strong>
+      <ul class="crisis__list" id="crisis-list"></ul>
+      <button class="crisis__close" id="crisis-close" aria-label="Dismiss">&times;</button>
+    </div>
+  </div>
+
+  <!-- ─── Main ───────────────────────────────────────────────── -->
+  <main class="main">
+    <section class="conversation" aria-label="Conversation">
+      <div class="thread" id="thread" role="log" aria-live="polite" aria-relevant="additions text">
+
+        <div class="welcome" id="welcome">
+          <div class="welcome__orb" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h2>How are you, really?</h2>
+          <p>
+            Type it, say it out loud, or show me a picture. I'll listen first —
+            I'm not here to fix you or hand you a checklist.
+          </p>
+          <div class="chips" id="starter-chips">
+            <button class="chip" data-prompt="I've been feeling anxious and I'm not sure why.">I feel anxious</button>
+            <button class="chip" data-prompt="I'm completely burned out at work and it's spilling into everything else.">I'm burned out</button>
+            <button class="chip" data-prompt="I can't sleep and my head won't stop running.">I can't sleep</button>
+            <button class="chip" data-prompt="Something good happened today and I want to talk about it.">Something good happened</button>
+          </div>
+          <p class="welcome__note">
+            Aura is an AI, not a therapist or a crisis service. Conversations are held
+            in memory only and are never written to disk.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- ─── Composer ─────────────────────────────────────────── -->
+      <div class="composer">
+        <div class="composer__notices" id="notices" role="status" aria-live="polite"></div>
+        <div class="composer__attachments" id="attachment-tray" hidden></div>
+
+        <div class="recorder" id="recorder" hidden>
+          <span class="recorder__dot" aria-hidden="true"></span>
+          <span class="recorder__time" id="recorder-time">0:00</span>
+          <canvas class="recorder__viz" id="recorder-viz" width="320" height="34" aria-hidden="true"></canvas>
+          <button class="btn btn--ghost" id="record-cancel">Cancel</button>
+          <button class="btn btn--accent" id="record-stop">Send voice</button>
+        </div>
+
+        <form class="composer__form" id="composer" autocomplete="off">
+          <button type="button" class="iconbtn iconbtn--composer" id="attach-btn" title="Share an image">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="8.6" cy="9.4" r="1.9" fill="currentColor"/><path d="M4 17l4.6-4.4a2 2 0 012.8 0L20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            <span class="sr-only">Attach an image</span>
+          </button>
+          <input type="file" id="file-input" accept="image/*" hidden />
+
+          <label class="sr-only" for="composer-input">Your message</label>
+          <textarea id="composer-input" class="composer__input" rows="1"
+                    placeholder="Say what's on your mind…" maxlength="4000"></textarea>
+
+          <button type="button" class="iconbtn iconbtn--composer" id="mic-btn" title="Record your voice">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11.5" rx="3" fill="currentColor"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            <span class="sr-only">Record a voice message</span>
+          </button>
+
+          <button type="submit" class="sendbtn" id="send-btn" title="Send (Enter)">
+            <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M3.2 11.3 20 4.2a.6.6 0 0 1 .8.8l-7.1 16.8a.6.6 0 0 1-1.1 0l-2.6-6.4a.6.6 0 0 0-.34-.34l-6.4-2.6a.6.6 0 0 1 0-1.1z" fill="currentColor"/></svg>
+            <span class="sr-only">Send message</span>
+          </button>
+        </form>
+
+        <div class="composer__footer">
+          <label class="switch">
+            <input type="checkbox" id="speak-toggle" />
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span class="switch__label">Speak replies</span>
+          </label>
+          <span class="composer__hint"><kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Insights panel ─────────────────────────────────────── -->
+    <aside class="insights" id="insights" aria-label="Session insights">
+      <div class="insights__scroll">
+        <section class="card">
+          <h3>How this conversation is going</h3>
+          <div class="mood">
+            <div class="mood__now">
+              <span class="mood__emoji" id="mood-emoji" aria-hidden="true">·</span>
+              <div>
+                <strong id="mood-label">Not enough to go on yet</strong>
+                <span class="mood__meta" id="mood-meta">Say something and I'll listen for tone.</span>
+              </div>
+            </div>
+            <svg class="sparkline" id="sparkline" viewBox="0 0 240 56" preserveAspectRatio="none"
+                 role="img" aria-label="Mood over the course of this conversation"></svg>
+            <div class="mood__axis"><span>earlier</span><span id="mood-direction"></span><span>now</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>What keeps coming up</h3>
+          <div class="topics" id="topics">
+            <p class="empty">Themes will appear here as we talk.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>If you need a person</h3>
+          <ul class="resources" id="resources"></ul>
+        </section>
+
+        <section class="card card--quiet">
+          <h3>Privacy</h3>
+          <p class="fine">
+            This conversation lives in the server's memory and disappears when it
+            expires or when you clear it. Nothing is written to disk and nothing
+            is used for training.
+          </p>
+          <button class="btn btn--danger" id="clear-btn">Clear this conversation</button>
+        </section>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/assets/app.js" type="module"></script>
+</body>
+</html>

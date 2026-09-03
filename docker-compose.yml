@@ -1,0 +1,31 @@
+services:
+  aura:
+    build:
+      context: .
+      args:
+        # Set to "[ml]" and uncomment the `deploy` block below for Gemma 3n.
+        EXTRAS: ""
+    ports:
+      - "8000:8000"
+    environment:
+      AURA_ENGINE: auto
+      AURA_ENVIRONMENT: production
+      AURA_LOG_JSON: "true"
+      AURA_CRISIS_REGION: INTL
+      # Narrow this to your own origin in a real deployment.
+      AURA_CORS_ORIGINS: "*"
+    volumes:
+      # Cache model weights across restarts.
+      - hf-cache:/home/aura/.cache/huggingface
+    restart: unless-stopped
+    # GPU inference — requires the NVIDIA container toolkit.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  hf-cache:

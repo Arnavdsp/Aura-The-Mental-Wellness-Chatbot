@@ -35,6 +35,7 @@ from aura.schemas import (
     AffectSignal,
     Attachment,
     ChatRequest,
+    InlineAttachment,
     Modality,
     Role,
     SafetyAssessment,
@@ -64,6 +65,21 @@ class PreparedTurn:
         return None
 
 
+
+def _inline_to_stored(item: InlineAttachment) -> StoredAttachment:
+    """Adapt an inline upload to the same shape a staged upload has."""
+    return StoredAttachment(
+        id=new_id("att"),
+        attachment=Attachment(
+            kind=item.kind,
+            media_type=item.media_type,
+            filename=item.filename,
+            size_bytes=len(item.data),
+        ),
+        data=item.data,
+    )
+
+
 class Coach:
     """Stateless per-request orchestration over the engine and session store."""
 
@@ -78,7 +94,8 @@ class Coach:
 
     async def prepare(self, request: ChatRequest) -> PreparedTurn:
         memory = await self.store.get_or_create(request.session_id)
-        stored = await self.store.pop_attachments(request.attachment_ids)
+        stored = [_inline_to_stored(item) for item in request.attachments]
+        stored += await self.store.pop_attachments(request.attachment_ids)
 
         attachments: list[Attachment] = []
         images: list[bytes] = []

@@ -9,8 +9,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
-from aura.api.deps import AppState, get_coach, get_state
+from aura.api.deps import AppState, get_coach, get_settings_dep, get_state
 from aura.coach import Coach
+from aura.config import Settings
 from aura.logging import get_logger
 from aura.prompts import suggestions_for
 from aura.schemas import Attachment, ChatRequest, ChatResponse, Modality, UploadResponse
@@ -22,13 +23,26 @@ _AUDIO_PREFIX = "audio/"
 _IMAGE_PREFIX = "image/"
 
 
+def _validate(request: ChatRequest, settings: Settings) -> None:
+    """Reject empty turns and oversized inline uploads before any work starts."""
+    if not request.message and not request.attachment_ids and not request.attachments:
+        raise HTTPException(status_code=422, detail="Send a message or an attachment.")
+    limit = settings.max_upload_bytes
+    if any(len(item.data) > limit for item in request.attachments):
+        raise HTTPException(
+            status_code=413,
+            detail=f"That file is larger than the {limit // (1024 * 1024)} MB limit.",
+        )
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
-    request: ChatRequest, coach: Annotated[Coach, Depends(get_coach)]
+    request: ChatRequest,
+    coach: Annotated[Coach, Depends(get_coach)],
+    settings: Annotated[Settings, Depends(get_settings_dep)],
 ) -> ChatResponse:
     """One buffered turn. Use ``/api/chat/stream`` for a live typing effect."""
-    if not request.message and not request.attachment_ids:
-        raise HTTPException(status_code=422, detail="Send a message or an attachment.")
+    _validate(request, settings)
 
     prepared, reply, audio_id = await coach.respond(request)
     return ChatResponse(
@@ -44,11 +58,12 @@ async def chat(
 
 @router.post("/chat/stream")
 async def chat_stream(
-    request: ChatRequest, coach: Annotated[Coach, Depends(get_coach)]
+    request: ChatRequest,
+    coach: Annotated[Coach, Depends(get_coach)],
+    settings: Annotated[Settings, Depends(get_settings_dep)],
 ) -> StreamingResponse:
     """Server-sent events: ``meta``, then ``token``\\*, then ``done``."""
-    if not request.message and not request.attachment_ids:
-        raise HTTPException(status_code=422, detail="Send a message or an attachment.")
+    _validate(request, settings)
 
     async def publish() -> AsyncIterator[str]:
         try:

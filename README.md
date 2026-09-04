@@ -41,7 +41,17 @@ docker compose up --build       # http://localhost:8000
 ```
 
 ---
+for echo engine and UI check:
 
+```bash
+git clone https://github.com/Arnavdsp/Gemma-3n-Hackathon.git
+cd Gemma-3n-Hackathon
+git checkout claude/wellness-coach-multimodal-gj4r65
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e .
+aura serve
+```
 ## What it does
 
 | | |

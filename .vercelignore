@@ -1,0 +1,39 @@
+# Vercel build / deploy exclusions
+# Keep the dependency install fast by excluding code Vercel doesn't need.
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tests, notebooks, docs, Docker artifacts (not needed on Vercel)
+tests/
+notebooks/
+docs/
+var/
+src/aura/training/     # fine-tuning pipeline, not needed at runtime
+src/aura/modalities/   # ffmpeg-dependent audio, not available on Vercel
+
+# Local Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDE and OS noise
+.claude/
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Local dev helpers that aren't needed on Vercel
+Makefile
+.env
+.env.example
+.env.local

@@ -19,3 +19,5 @@ wandb/
 *.safetensors
 .DS_Store
 .ipynb_checkpoints/
+.vercel
+.env*

@@ -41,17 +41,7 @@ docker compose up --build       # http://localhost:8000
 ```
 
 ---
-for echo engine and UI check:
 
-```bash
-git clone https://github.com/Arnavdsp/Gemma-3n-Hackathon.git
-cd Gemma-3n-Hackathon
-git checkout claude/wellness-coach-multimodal-gj4r65
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -e .
-aura serve
-```
 ## What it does
 
 | | |
@@ -299,6 +289,48 @@ make serve      # hot reload
 CI runs the suite on Python 3.10–3.12, lints, builds the Docker image and smoke
 tests the running container.
 
+### Deploy to Vercel (free tier, echo engine, no GPU)
+
+Vercel can host Aura as a single Python serverless function. Because the function
+is short-lived and stateless, only the **echo engine** is supported on Vercel —
+Gemma 3n needs a long-lived GPU host (Modal, RunPod, or a Vast.ai box). The
+public website works; sessions and uploaded media reset on every cold start.
+
+```bash
+# One-time: link the project
+vercel link
+
+# Deploy (Vercel runs ``pip install -e .`` per vercel.json)
+vercel deploy --prod
+```
+
+What the deploy does:
+
+- `api/index.py` wraps the FastAPI app with Mangum, the ASGI → serverless
+  adapter. Vercel invokes the `handler` for every request.
+- `vercel.json` rewrites everything (`/`, `/api/chat`, `/assets/...`) to
+  `/api/index`, so a single function handles both the UI and the API.
+- `public/` holds a copy of `index.html`, `styles.css` and `app.js`. FastAPI's
+  `StaticFiles` mount serves them, so the same code path runs locally and on
+  Vercel.
+- `.vercelignore` keeps the deployment package small: no `src/`, no `tests/`,
+  no notebooks, no Docker files.
+
+To switch static-file paths when developing locally, leave `AURA_STATIC_DIR`
+unset (it defaults to `web/`). On Vercel, `api/index.py` sets it to `public/`
+before importing the app.
+
+**Vercel limitations to be aware of:**
+
+| | |
+|---|---|
+| Function timeout | 30s on the hobby plan. The echo engine responds in milliseconds. |
+| Cold start | ~1-2s. The first request after inactivity will be slow. |
+| Memory | 1024 MB by default. More than enough for the echo engine. |
+| Sessions | In-memory. Each cold start wipes them — by design, since this is a wellness product. |
+| No ffmpeg | WebM/Opus uploads will not decode on Vercel. Plain WAV works. |
+| Static assets | Served by FastAPI inside the function, not from Vercel's CDN. Fine for a demo, slow for production. |
+
 ### Configuration
 
 Every setting is an `AURA_*` environment variable — see [`.env.example`](.env.example)
@@ -313,17 +345,22 @@ for the annotated list. The ones that matter most:
 | `AURA_TTS_BACKEND` | `speecht5` | `speecht5` · `piper` · `none` |
 | `AURA_ASR_BACKEND` | `gemma` | `gemma` · `whisper` · `none` |
 | `AURA_SESSION_TTL_SECONDS` | `21600` | 6 hours |
+| `AURA_STATIC_DIR` | `web/` | Set to `public/` on Vercel (set automatically in `api/index.py`) |
 
 ### Known limits
 
 - Sessions are in-process, so the service is single-node as written. `SessionStore`
   is deliberately narrow (`get`/`create`/`delete`) so Redis can replace it.
+- On Vercel, the function is short-lived. Each cold start wipes session state
+  and uploaded attachments — acceptable for a privacy-first wellness product,
+  not for long-running coaching relationships.
 - The affect lexicon is English-only. Gemma 3n itself is multilingual; the tone
   estimate is not.
 - Prosody-based emotion is off by default — it needs an extra wav2vec2 model and
   adds noticeable latency.
 - Browser audio arrives as WebM/Opus; decoding it needs `ffmpeg` on the host
-  (included in the Docker image). Plain WAV works with no system dependencies.
+  (included in the Docker image, but **not** in Vercel functions). Plain WAV
+  uploads work everywhere.
 
 ---
 

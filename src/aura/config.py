@@ -7,6 +7,7 @@ without a code change. See ``.env.example`` for the full list.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -78,6 +79,9 @@ class Settings(BaseSettings):
     crisis_region: str = "INTL"
 
     # -- paths -----------------------------------------------------------
+    # On Vercel, the static files are copied to ``public/`` so the FastAPI
+    # StaticFiles mount can serve them.  Locally, the source-of-truth lives in
+    # ``web/``.  pydantic-settings reads ``AURA_STATIC_DIR`` from the env.
     static_dir: Path = REPO_ROOT / "web"
     data_dir: Path = REPO_ROOT / "var"
 

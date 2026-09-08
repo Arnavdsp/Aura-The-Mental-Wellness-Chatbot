@@ -29,6 +29,7 @@ dependencies = [
   "python-multipart>=0.0.9",
   "numpy>=1.24",
   "pillow>=10.0",
+  "mangum>=0.17",  # ASGI adapter for Vercel/Lambda serverless functions
 ]
 
 [project.optional-dependencies]

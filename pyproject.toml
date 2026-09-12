@@ -7,6 +7,7 @@ name = "aura-wellness-coach"
 version = "1.0.0"
 description = "A multimodal mental wellness coach built on Gemma 3n."
 readme = "README.md"
+authors = [{ name = "Arnav Deshpande", email = "arnavhpd@gmail.com" }]
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 keywords = ["gemma", "wellness", "multimodal", "coaching", "mental-health"]

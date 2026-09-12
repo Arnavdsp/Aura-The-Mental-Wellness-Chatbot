@@ -15,7 +15,8 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   sessionId: null,
-  pendingAttachments: [], // { id, kind, previewUrl, name }
+  pendingAttachments: [], // { id, kind, previewUrl, name, inline }
+  attachmentSeq: 0,
   sending: false,
   speak: false,
   recorder: null,
@@ -301,16 +302,31 @@ async function consumeStream(response, onEvent) {
   }
 }
 
-async function uploadFile(file, kind) {
-  const form = new FormData();
-  form.append("file", file, file.name || `clip.${kind === "audio" ? "webm" : "png"}`);
-  form.append("kind", kind);
-  const response = await fetch("/api/uploads", { method: "POST", body: form });
-  if (!response.ok) {
-    const detail = await response.json().catch(() => ({}));
-    throw new Error(detail.detail || "That upload failed.");
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Read a file into the shape `/api/chat` accepts inline.
+ *
+ * The turn carries its own bytes rather than an id from a prior upload: on a
+ * serverless host the two requests can land on different instances, and a
+ * staged upload the second instance never saw is a photo that vanishes.
+ */
+async function readAttachment(file, kind) {
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error("That file is larger than the 25 MB limit.");
   }
-  return response.json();
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return {
+    kind,
+    media_type: file.type || (kind === "audio" ? "audio/webm" : "application/octet-stream"),
+    filename: file.name || `clip.${kind === "audio" ? "webm" : "png"}`,
+    data: btoa(binary),
+  };
 }
 
 /* ── Sending a turn ────────────────────────────────────────────────────── */
@@ -342,7 +358,7 @@ async function submitMessage(text) {
         session_id: state.sessionId,
         message,
         speak: state.speak,
-        attachment_ids: attachments.map((a) => a.id),
+        attachments: attachments.map((a) => a.inline),
       }),
     });
 
@@ -457,12 +473,12 @@ async function handleFiles(files) {
       continue;
     }
     try {
-      const result = await uploadFile(file, "image");
       state.pendingAttachments.push({
-        id: result.attachment_id,
+        id: `att-${state.attachmentSeq++}`,
         kind: "image",
         name: file.name,
         previewUrl: URL.createObjectURL(file),
+        inline: await readAttachment(file, "image"),
       });
       renderTray();
     } catch (error) {
@@ -542,9 +558,11 @@ function stopRecording(cancel = false) {
     }
     try {
       const file = new File([blob], "voice.webm", { type: session.mimeType });
-      const result = await uploadFile(file, "audio");
       state.pendingAttachments.push({
-        id: result.attachment_id, kind: "audio", name: "Voice message",
+        id: `att-${state.attachmentSeq++}`,
+        kind: "audio",
+        name: "Voice message",
+        inline: await readAttachment(file, "audio"),
       });
       renderTray();
       await submitMessage("");

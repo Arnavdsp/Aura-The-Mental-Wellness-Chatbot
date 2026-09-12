@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 
 import pytest
@@ -111,6 +112,71 @@ def test_image_upload_is_normalised_and_attached(client, png_bytes: bytes) -> No
     attachments = body["turn"]["attachments"]
     assert len(attachments) == 1
     assert attachments[0]["media_type"] == "image/png"  # re-encoded, EXIF stripped
+
+
+def test_inline_image_needs_no_prior_upload(client, png_bytes: bytes) -> None:
+    """The serverless path: one request carries both the text and the bytes."""
+    body = client.post(
+        "/api/chat",
+        json={
+            "message": "This is my quiet place",
+            "attachments": [
+                {
+                    "kind": "image",
+                    "media_type": "image/png",
+                    "filename": "photo.png",
+                    "data": base64.b64encode(png_bytes).decode(),
+                }
+            ],
+        },
+    ).json()
+    attachments = body["turn"]["attachments"]
+    assert len(attachments) == 1
+    assert attachments[0]["media_type"] == "image/png"
+    # Nothing was staged server-side, so there is no id to dereference later.
+    assert attachments[0]["uri"] is None
+
+
+def test_inline_attachment_accepts_a_data_url(client, png_bytes: bytes) -> None:
+    encoded = base64.b64encode(png_bytes).decode()
+    response = client.post(
+        "/api/chat",
+        json={
+            "attachments": [
+                {"kind": "image", "media_type": "image/png", "data": f"data:image/png;base64,{encoded}"}
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_inline_attachment_alone_is_enough_content(client, png_bytes: bytes) -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "attachments": [
+                {"kind": "image", "media_type": "image/png", "data": base64.b64encode(png_bytes).decode()}
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_inline_attachment_rejects_junk_base64(client) -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "hi", "attachments": [{"kind": "image", "data": "not base64!"}]},
+    )
+    assert response.status_code == 422
+
+
+def test_inline_attachment_enforces_the_size_limit(client, settings) -> None:
+    oversized = base64.b64encode(b"\0" * (settings.max_upload_bytes + 1)).decode()
+    response = client.post(
+        "/api/chat",
+        json={"attachments": [{"kind": "image", "media_type": "image/png", "data": oversized}]},
+    )
+    assert response.status_code == 413
 
 
 def test_attachments_are_consumed_once(client, png_bytes: bytes) -> None:

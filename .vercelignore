@@ -9,3 +9,6 @@ var/
 Dockerfile
 docker-compose.yml
 Makefile
+
+# Build artefacts from a local `python -m build`.
+build/

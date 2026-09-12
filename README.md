@@ -83,7 +83,7 @@ its own purpose.
 
 ```
 Browser (vanilla ES modules, no build step)
-  │  SSE  ·  multipart uploads
+  │  SSE  ·  inline image/audio attachments
   ▼
 FastAPI  ── routes: /api/chat · /api/chat/stream · /api/uploads · /api/sessions
   ▼
@@ -132,7 +132,7 @@ src/aura/
 │   └── evaluate.py    # behavioural scoring
 └── web/               # index.html · styles.css · app.js (no build step)
 api/index.py           # Vercel serverless entrypoint
-tests/                 # 122 tests, no GPU, no network
+tests/                 # 133 tests, no GPU, no network
 notebooks/             # the original exploration notebooks
 ```
 </details>
@@ -314,7 +314,7 @@ Three further limits follow from serverless, and none of them are bugs:
 
 | Limit | Effect |
 |---|---|
-| Instances are ephemeral and not shared | Sessions live in process memory, so conversation history, the topic graph and the mood trend survive only while an instance stays warm. Uploads are worse: staging a file and sending the message are two requests, so an image or voice note can land on an instance that never sees the follow-up. |
+| Instances are ephemeral and not shared | Sessions live in process memory, so conversation history, the topic graph and the mood trend survive only while an instance stays warm. Attachments are unaffected — the web client sends image and audio bytes inline with the turn (`attachments[]` on `POST /api/chat`) rather than staging them in a prior request, so nothing depends on two requests reaching the same instance. |
 | No `ffmpeg` in the runtime | Browser voice notes arrive as WebM/Opus and cannot be decoded, so `AURA_ASR_BACKEND=none`. Plain WAV still decodes. |
 | TTS needs torch | Spoken replies are off (`AURA_TTS_BACKEND=none`). |
 
@@ -330,7 +330,7 @@ change standing between this and a stateless-friendly deployment.
 
 ```bash
 make dev        # install with dev tooling
-make test       # 119 tests, ~3s, no GPU or network
+make test       # 133 tests, ~3s, no GPU or network
 make lint       # ruff
 make evaluate   # behavioural scoring
 make serve      # hot reload

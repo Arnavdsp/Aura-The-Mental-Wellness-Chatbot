@@ -1,0 +1,3 @@
+# Aura is a private wellness companion, not something to index.
+User-agent: *
+Disallow: /

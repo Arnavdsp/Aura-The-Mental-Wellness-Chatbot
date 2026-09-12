@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
@@ -95,6 +97,32 @@ class Turn(BaseModel):
     meta: dict[str, Any] = Field(default_factory=dict)
 
 
+class InlineAttachment(BaseModel):
+    """An upload carried inside the chat request itself.
+
+    Serverless platforms route consecutive requests to different instances, so a
+    two-step ``POST /api/uploads`` then ``POST /api/chat`` handoff loses the file
+    whenever the second request lands elsewhere. Sending the bytes with the turn
+    keeps the multimodal path working on any deployment, warm or cold.
+    """
+
+    kind: Modality
+    media_type: str = "application/octet-stream"
+    filename: str | None = None
+    data: bytes = Field(description="Base64 payload; a `data:` URL is also accepted.")
+
+    @field_validator("data", mode="before")
+    @classmethod
+    def _decode(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        payload = value.split(",", 1)[1] if value.startswith("data:") else value
+        try:
+            return base64.b64decode(payload, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("Attachment data must be base64.") from exc
+
+
 class ChatRequest(BaseModel):
     """A turn submitted by the client."""
 
@@ -102,7 +130,12 @@ class ChatRequest(BaseModel):
     message: str = ""
     speak: bool = Field(default=False, description="Also synthesise a spoken reply.")
     voice: str | None = None
-    attachment_ids: list[str] = Field(default_factory=list)
+    attachment_ids: list[str] = Field(
+        default_factory=list, description="Ids from `POST /api/uploads` (same-instance only)."
+    )
+    attachments: list[InlineAttachment] = Field(
+        default_factory=list, description="Uploads carried inline; works across instances."
+    )
 
     @field_validator("message")
     @classmethod

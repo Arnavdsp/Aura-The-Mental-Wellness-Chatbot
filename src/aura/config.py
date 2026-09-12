@@ -15,6 +15,9 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# The UI is packaged inside `aura`, so this resolves identically for an editable
+# checkout, a wheel in site-packages, and a serverless bundle.
+STATIC_DIR = Path(__file__).resolve().parent / "web"
 
 EngineName = Literal["gemma", "echo", "auto"]
 
@@ -78,7 +81,7 @@ class Settings(BaseSettings):
     crisis_region: str = "INTL"
 
     # -- paths -----------------------------------------------------------
-    static_dir: Path = REPO_ROOT / "web"
+    static_dir: Path = STATIC_DIR
     data_dir: Path = REPO_ROOT / "var"
 
     @field_validator("cors_origins", mode="before")

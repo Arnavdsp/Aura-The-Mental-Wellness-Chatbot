@@ -1,0 +1,11 @@
+# Keep the serverless bundle small — none of this is needed to serve the app.
+tests/
+notebooks/
+docs/
+.github/
+artifacts/
+var/
+*.ipynb
+Dockerfile
+docker-compose.yml
+Makefile

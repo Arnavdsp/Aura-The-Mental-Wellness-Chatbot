@@ -1,8 +1,20 @@
 from __future__ import annotations
 
 from aura.affect import analyse_text
-from aura.memory import ConversationMemory, TopicGraph, extract_topics
-from aura.schemas import RiskLevel, Role, SafetyAssessment, Turn
+from aura.memory import (
+    ConversationMemory,
+    TopicGraph,
+    alternating_history,
+    extract_topics,
+)
+from aura.schemas import (
+    Attachment,
+    Modality,
+    RiskLevel,
+    Role,
+    SafetyAssessment,
+    Turn,
+)
 
 
 def _user(text: str) -> Turn:
@@ -79,3 +91,63 @@ def test_recent_limits_context_window() -> None:
         memory.add(_user(f"message {index}"))
     assert len(memory.recent(4)) == 4
     assert memory.recent(4)[-1].text == "message 9"
+
+
+def _exchange(memory: ConversationMemory, index: int) -> None:
+    memory.add(Turn(id=f"u{index}", role=Role.USER, text=f"user {index}"))
+    memory.add(Turn(id=f"a{index}", role=Role.ASSISTANT, text=f"reply {index}"))
+
+
+def _alternates(history: list[tuple[str, str]]) -> bool:
+    roles = [role for role, _ in history]
+    if not roles:
+        return True
+    return (
+        roles[0] == "user"
+        and roles[-1] == "assistant"
+        and all(roles[i] != roles[i + 1] for i in range(len(roles) - 1))
+    )
+
+
+def test_history_alternates_once_the_window_starts_sliding() -> None:
+    """The regression this exists for.
+
+    With a plain slice the 12-turn window begins on an assistant turn from the
+    seventh exchange onward, and Gemma's chat template raises rather than
+    repairing it — so the deployed app crashed only in conversations long enough
+    to reach that point, and passed every short manual test.
+    """
+    memory = ConversationMemory(session_id="s")
+    for index in range(1, 16):
+        memory.add(Turn(id=f"u{index}", role=Role.USER, text=f"user {index}"))
+        assert _alternates(alternating_history(memory.turns, 12)), f"exchange {index}"
+        memory.add(Turn(id=f"a{index}", role=Role.ASSISTANT, text=f"reply {index}"))
+
+
+def test_history_excludes_the_turn_being_sent() -> None:
+    memory = ConversationMemory(session_id="s")
+    _exchange(memory, 1)
+    memory.add(Turn(id="u2", role=Role.USER, text="user 2"))
+    assert alternating_history(memory.turns, 12) == [("user", "user 1"), ("assistant", "reply 1")]
+
+
+def test_history_skips_a_turn_with_no_text_without_breaking_alternation() -> None:
+    """An image with no caption yet has empty text. Dropping it alone would put
+    two assistant turns together."""
+    memory = ConversationMemory(session_id="s")
+    memory.add(Turn(id="u1", role=Role.USER, text="",
+                    attachments=[Attachment(kind=Modality.IMAGE, media_type="image/png")]))
+    memory.add(Turn(id="a1", role=Role.ASSISTANT, text="I can see it."))
+    memory.add(Turn(id="u2", role=Role.USER, text="what do you make of it?"))
+    assert _alternates(alternating_history(memory.turns, 12))
+
+
+def test_history_folds_an_attachment_transcript_into_the_text() -> None:
+    memory = ConversationMemory(session_id="s")
+    memory.add(Turn(id="u1", role=Role.USER, text="listen to this",
+                    attachments=[Attachment(kind=Modality.AUDIO, media_type="audio/wav",
+                                            transcript="I can't sleep")]))
+    memory.add(Turn(id="a1", role=Role.ASSISTANT, text="That sounds hard."))
+    memory.add(Turn(id="u2", role=Role.USER, text="yeah"))
+    history = alternating_history(memory.turns, 12)
+    assert history[0] == ("user", "listen to this I can't sleep")

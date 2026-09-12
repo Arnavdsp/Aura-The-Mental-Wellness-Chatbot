@@ -135,7 +135,7 @@ src/aura/
 └── web/               # index.html · styles.css · app.js (no build step)
 api/index.py           # Vercel serverless entrypoint
 deploy/                # ZeroGPU Space (real Gemma 3n) + Docker/Render blueprints
-tests/                 # 140 tests, no GPU, no network
+tests/                 # 148 tests, no GPU, no network
 notebooks/             # the original exploration notebooks
 ```
 </details>
@@ -158,6 +158,35 @@ name the feeling tentatively, ask one open question. It has no world knowledge �
 only structure. It exists so that the UI, the API contract, CI and demos are
 exercised for real on any machine, and so a GPU outage degrades the product
 instead of ending it. Its output is deterministic per input.
+
+---
+
+## Evaluation
+
+Full method, raw responses and known gaps: **[docs/evaluation.md](docs/evaluation.md)**.
+
+The crisis screen is a pure function, so its numbers are independent of the
+model. Measured against 33 cases labelled by intent — a third of them ordinary
+language built from the same words the rules look for:
+
+| | Before | After |
+|---|---:|---:|
+| Crisis precision | 85.7% | 100% |
+| Crisis recall | 60.0% | 100% |
+| Exact risk level | 63.3% | 100% |
+
+"Before" is the screen as first written. It missed *"I self-harmed last night"*
+(the rule matched only the bare stem, never an inflected form) and *"I have a
+plan and I've written the note"* (no rule fires without the literal word
+*suicide*) — while firing on *"I'm cutting myself some slack."* The suite and
+the fixes were written together, so **100% means no *known* gaps, not no gaps**;
+its real value is the baseline it exposed and the CI guard it now provides.
+
+Coaching behaviour, 40 held-out prompts, six lexical proxies — on the echo
+engine: 69.2% mean, `asks_question` 100%, `avoids_directives` 100%, but
+`reflects` 7.5% and `hedges` 7.5%. Those last two are the gap a real model is
+meant to close. **The Gemma 3n figure is not measured yet** — a full run is 40
+generations and exceeds a free ZeroGPU account's daily quota.
 
 ---
 
@@ -401,7 +430,7 @@ change standing between this and a stateless-friendly deployment.
 
 ```bash
 make dev        # install with dev tooling
-make test       # 140 tests, ~3s, no GPU or network
+make test       # 148 tests, ~3s, no GPU or network
 make lint       # ruff
 make evaluate   # behavioural scoring
 make serve      # hot reload

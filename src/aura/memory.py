@@ -18,6 +18,7 @@ from __future__ import annotations
 import itertools
 import re
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -178,3 +179,52 @@ class ConversationMemory:
             if turn.role.value == "user" and turn.affect:
                 return turn.affect
         return AffectSignal()
+
+
+def alternating_history(
+    turns: Sequence[Turn], limit: int, *, exclude_last: bool = True
+) -> list[tuple[str, str]]:
+    """Recent turns as ``(role, text)``, strictly alternating from the user.
+
+    Chat templates — Gemma's included — reject a history that does not alternate
+    user/assistant starting from the user, and raise rather than repair it. Three
+    ordinary situations produce one that does not:
+
+    * a sliding window long enough to begin part-way through, on an assistant turn;
+    * a turn with no text (an image with no caption yet), which removes one side
+      of a pair and leaves the other adjacent to its neighbour;
+    * the turn being sent now, already recorded, appearing again in the history.
+
+    Walking the turns against an expected role handles all three. Slicing, which
+    is the obvious implementation, handles none of them — and the failure only
+    appears once a conversation is long enough for the window to slide, so it
+    survives every short manual test.
+
+    Attachment transcripts and captions are folded into the text, since a history
+    entry is text-only; re-sending the media on every turn would exhaust the
+    context window.
+    """
+    window = list(turns[:-1] if exclude_last else turns)
+    if limit > 0:
+        window = window[-limit:]
+
+    history: list[tuple[str, str]] = []
+    expected = "user"
+    for turn in window:
+        if turn.role.value != expected:
+            continue
+        extra = [
+            a.transcript or a.caption
+            for a in turn.attachments
+            if a.transcript or a.caption
+        ]
+        text = " ".join([turn.text, *extra]).strip() if extra else turn.text
+        if not text:
+            continue
+        history.append((expected, text))
+        expected = "assistant" if expected == "user" else "user"
+
+    # A trailing user entry would sit next to the turn about to be appended.
+    if history and history[-1][0] == "user":
+        history.pop()
+    return history

@@ -110,6 +110,9 @@ _RULES: tuple[_Rule, ...] = (
         RiskLevel.CRISIS,
         r"\bkill(?:ing)?\s+my\s?self\b",
         r"\bend(?:ing)?\s+(?:my|it)\s+(?:life|all)\b",
+        # "ending it" alone reads as suicidal unless it is "ending it *with*
+        # someone", which is a breakup. The lookahead is the whole difference.
+        r"\bend(?:ing)?\s+it\b(?!\s+with\b)",
         r"\btake\s+my\s+own\s+life\b",
         r"\bdon'?t\s+want\s+to\s+(?:be\s+here|live|wake\s+up)\b",
         r"\bbetter\s+off\s+(?:dead|without\s+me)\b",
@@ -118,13 +121,23 @@ _RULES: tuple[_Rule, ...] = (
         r"\bwant(?:s|ed)?\s+to\s+die\b",
         r"\bwish(?:ed)?\s+i\s+(?:was|were)\s+dead\b",
         r"\bno\s+reason\s+to\s+(?:live|go\s+on)\b",
+        # Requires both halves to be present anywhere in the message. "I have a
+        # plan" is a coping statement; "I've written the note" is admin; together
+        # they are the most serious disclosure in the suite, and neither half
+        # contains the word this rule is named after.
+        r"(?=[\s\S]*\bhave\s+a\s+plan\b)"
+        r"(?=[\s\S]*\b(?:written|wrote|left)\s+(?:a|the|my)\s+note\b)",
     ),
     _rule(
         "self_harm",
         RiskLevel.CRISIS,
-        r"\b(?:cut|cutting|burn(?:ing)?|hurt(?:ing)?)\s+my\s?self\b",
-        r"\bself[-\s]?harm\b",
-        r"\boverdos(?:e|ing)\b",
+        r"\b(?:cut|cutting|burn(?:ing)?|hurt(?:ing)?)\s+my\s?self\b"
+        r"(?!\s+(?:some\s+slack|a\s+break|slack))",
+        # The trailing \\b used to stop this matching "self-harmed" and
+        # "self-harming" — the two most common ways anyone actually says it.
+        r"\bself[-\s]?harm(?:ed|ing|s)?\b",
+        r"\boverdos(?:e|ing|ed)\b",
+        r"\btook\s+too\s+many\s+(?:pills|tablets)\b",
     ),
     _rule(
         "harm_to_others",
@@ -137,6 +150,7 @@ _RULES: tuple[_Rule, ...] = (
         RiskLevel.ELEVATED,
         r"\b(?:he|she|they|my\s+\w+)\s+(?:hits?|beats?|hurts?|threatens?)\s+me\b",
         r"\bnot\s+safe\s+at\s+home\b",
+        r"\bdon'?t\s+feel\s+safe\b",
         r"\bafraid\s+of\s+(?:him|her|them|my\s+partner)\b",
     ),
     _rule(
@@ -144,13 +158,18 @@ _RULES: tuple[_Rule, ...] = (
         RiskLevel.ELEVATED,
         r"\bhopeless\b",
         r"\bcan'?t\s+(?:go\s+on|take\s+(?:it|this)\s+any\s?more)\b",
-        r"\bnothing\s+matters\s+any\s?more\b",
+        r"\bnothing\s+(?:i\s+do\s+)?matters\b",
+        r"\bnever\s+going\s+to\s+(?:change|get\s+better|end)\b",
         r"\bwhat'?s\s+the\s+point\s+of\s+anything\b",
+        # Kept at ELEVATED, not CRISIS: "I wanted to disappear" is as often
+        # embarrassment as danger, and over-firing here would cost precision.
+        r"\bwant(?:ing|ed|s)?\s+to\s+disappear\b",
     ),
     _rule(
         "substance_risk",
         RiskLevel.ELEVATED,
         r"\bdrink(?:ing)?\s+(?:to\s+forget|myself\s+to\s+sleep)\b",
+        r"\bdrink(?:ing)?\s+every\s+(?:night|day)\b",
         r"\brelaps(?:e|ed|ing)\b",
     ),
     _rule(

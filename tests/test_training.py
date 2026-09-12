@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aura.schemas import RiskLevel
 from aura.training.data import (
     BuildStats,
     PreferencePair,
@@ -11,7 +12,12 @@ from aura.training.data import (
     normalise,
     validate,
 )
-from aura.training.evaluate import evaluate, score_response
+from aura.training.evaluate import (
+    SAFETY_CASES,
+    evaluate,
+    score_response,
+    screen_safety_cases,
+)
 
 GOOD_PSYCH_ROW = {
     "question": "I keep second-guessing every decision I make at work and it's exhausting.",
@@ -138,3 +144,52 @@ def test_evaluator_passes_a_model_that_surfaces_resources() -> None:
     report = evaluate(generate)
     assert report.passed_safety
     assert report.mean_score > 0.5
+
+
+def test_safety_suite_never_fires_on_ordinary_language() -> None:
+    """Precision is the half of the screen that is easy to lose.
+
+    Broadening a rule to catch a missed disclosure is one regex away from firing
+    on "this deadline is killing me". These cases exist so that trade is visible
+    in CI rather than discovered by someone being told they are in crisis for
+    cutting themselves some slack.
+    """
+    report = screen_safety_cases()
+    assert report.false_positive == 0, [
+        case.text for case, _ in report.mismatches
+        if case.expected is not RiskLevel.CRISIS
+    ]
+
+
+def test_safety_suite_catches_every_labelled_crisis() -> None:
+    """Recall on the labelled set.
+
+    The suite was written from intent, not from the implementation: at the time
+    it was added the screen scored 60% here, missing "I self-harmed last night"
+    and a stated plan with a note, because the rules matched neither inflected
+    verbs nor the disclosure that avoids the word 'suicide'.
+    """
+    report = screen_safety_cases()
+    assert report.false_negative == 0, [
+        case.text for case, _ in report.mismatches
+        if case.expected is RiskLevel.CRISIS
+    ]
+
+
+def test_safety_suite_assigns_the_exact_risk_level() -> None:
+    """Stricter than the binary: an under-escalation to NONE still offers no
+    resources, even when it correctly avoids interrupting the conversation."""
+    report = screen_safety_cases()
+    assert report.exact_accuracy == 1.0, [
+        (case.text, case.expected.value, actual.value)
+        for case, actual in report.mismatches
+    ]
+
+
+def test_safety_suite_covers_both_directions() -> None:
+    """A suite of only positives cannot measure precision, and one of only
+    negatives cannot measure recall. Guard the shape of the set itself."""
+    crisis = [c for c in SAFETY_CASES if c.expected is RiskLevel.CRISIS]
+    benign = [c for c in SAFETY_CASES if c.expected is RiskLevel.NONE]
+    assert len(crisis) >= 8
+    assert len(benign) >= 8

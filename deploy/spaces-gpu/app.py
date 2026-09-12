@@ -33,7 +33,7 @@ from transformers import AutoModelForImageTextToText, AutoProcessor, BatchFeatur
 from transformers.generation.streamers import TextIteratorStreamer
 
 from aura.affect import analyse_text, describe
-from aura.memory import ConversationMemory
+from aura.memory import ConversationMemory, alternating_history
 from aura.prompts import build_system_prompt, suggestions_for
 from aura.safety import crisis_message, resources_for, screen
 from aura.schemas import AffectSignal, RiskLevel, Role, SafetyAssessment, Turn
@@ -59,7 +59,15 @@ model = AutoModelForImageTextToText.from_pretrained(
 # ── Generation: the only part that needs a GPU ────────────────────────────────
 
 
-@spaces.GPU(duration=90)
+# Measured, not guessed: the slowest observed turn on this Space was 14.8s (an
+# image on a cold worker); warm text turns run 5-7s. The skill's rule of thumb is
+# `measured_max x 1.4`, rounded up here for cold-start variance.
+#
+# The number matters twice over. ZeroGPU compares *requested* duration against
+# remaining quota, not actual usage, so an over-declared 90s blocked every call
+# once fewer than 90 seconds were left — while each call was really costing six.
+# Shorter requests also rank higher in the queue.
+@spaces.GPU(duration=30)
 @torch.inference_mode()
 def _generate_on_gpu(inputs: BatchFeature, max_new_tokens: int) -> Iterator[str]:
     """Stream a reply. Runs in the forked GPU worker; returns plain strings."""
@@ -130,19 +138,15 @@ def _user_content(text: str, files: list[str]) -> tuple[list[dict], set[str]]:
 
 
 def _history_messages(memory: ConversationMemory) -> list[dict]:
-    """Past turns as text. Attachments are summarised, not re-sent — re-encoding
-    every image on every turn would blow the context window open."""
-    messages = []
-    for turn in memory.recent(HISTORY_TURNS):
-        text = turn.text
-        extra = [a.transcript or a.caption for a in turn.attachments if a.transcript or a.caption]
-        if extra:
-            text = " ".join([text, *extra]).strip()
-        if text:
-            messages.append(
-                {"role": turn.role.value, "content": [{"type": "text", "text": text}]}
-            )
-    return messages
+    """Past turns in the typed-part shape Gemma's template expects.
+
+    The ordering rules live in `aura.memory.alternating_history` so they are
+    covered by the repo's test suite rather than only by this Space.
+    """
+    return [
+        {"role": role, "content": [{"type": "text", "text": text}]}
+        for role, text in alternating_history(memory.turns, HISTORY_TURNS)
+    ]
 
 
 def _insights(memory: ConversationMemory, affect: AffectSignal, safety: SafetyAssessment) -> str:
@@ -242,7 +246,7 @@ def respond(
                 }
             ],
         },
-        *_history_messages(memory)[:-1],
+        *_history_messages(memory),
         {"role": "user", "content": parts},
     ]
 
@@ -342,4 +346,4 @@ with gr.Blocks(title="Aura — Multimodal Wellness Coach", fill_height=True) as 
     clear.click(reset, None, outputs)
 
 if __name__ == "__main__":
-    demo.launch(css=CSS)
+    demo.launch(css=CSS, show_error=True)

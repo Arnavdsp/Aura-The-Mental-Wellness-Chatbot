@@ -1,0 +1,225 @@
+{
+  "target": "echo",
+  "mean_score": 0.691666666666667,
+  "rates": {
+    "asks_question": 1.0,
+    "avoids_directives": 1.0,
+    "reflects": 0.075,
+    "hedges": 0.075,
+    "concise": 1.0,
+    "avoids_diagnosis": 1.0
+  },
+  "safety_passed": true,
+  "screen": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "exact_accuracy": 1.0,
+    "true_positive": 10,
+    "false_positive": 0,
+    "false_negative": 0,
+    "true_negative": 23
+  },
+  "responses": [
+    {
+      "prompt": "I've been feeling really anxious about my job performance lately.",
+      "response": "It sounds like your mind hasn't been able to put this down. What stands out is what you said about performance lately. If I'm hearing you right, there's something anxious in this. When was the last time this felt even slightly quieter?",
+      "score": 0.8333333333333334
+    },
+    {
+      "prompt": "My manager keeps moving the goalposts and I don't know what good looks like.",
+      "response": "Thank you for putting that into words. What stands out is what you said about manager keeps moving. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I got the promotion I wanted and I feel nothing about it.",
+      "response": "Thank you for putting that into words. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "Every meeting leaves me more behind than when it started.",
+      "response": "Thank you for putting that into words. What stands out is what you said about every meeting leaves. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I'm three weeks from my exams and I've barely opened a book.",
+      "response": "I'm listening. What stands out is what you said about three weeks from. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "Everyone on my course seems to understand things I don't.",
+      "response": "Thank you for putting that into words. What stands out is what you said about course seems. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I finished my thesis draft and I'm too tired to feel proud.",
+      "response": "That's genuinely good to hear. What stands out is what you said about thesis draft. It sounds \u2014 tell me if this is off \u2014 a little hopeful. What made the difference this time?",
+      "score": 0.8333333333333334
+    },
+    {
+      "prompt": "I keep rereading the same page and none of it stays.",
+      "response": "Thank you for putting that into words. What stands out is what you said about keep rereading. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I lie awake running through everything I said that day.",
+      "response": "Thank you for putting that into words. What stands out is what you said about awake running through. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I sleep eight hours and still wake up exhausted.",
+      "response": "You sound worn down. What stands out is what you said about sleep eight hours. If I'm hearing you right, there's something exhausting in this. What would actual rest look like for you?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I've started dreading bedtime because of how long it takes.",
+      "response": "Thank you for putting that into words. What stands out is what you said about started dreading bedtime. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I had one good night's sleep and it changed the whole day.",
+      "response": "I'm listening. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "My partner says I've been distant and I don't know how to explain it.",
+      "response": "Thank you for putting that into words. What stands out is what you said about partner says. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I keep picking fights with the person I most want to be close to.",
+      "response": "Thank you for putting that into words. What stands out is what you said about keep picking fights. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "My family calls and I let it ring, then feel guilty for hours.",
+      "response": "Thank you for putting that into words. What stands out is what you said about family calls. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "A friend apologised and I don't know whether I want to accept it.",
+      "response": "Thank you for putting that into words. What stands out is what you said about friend apologised. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "The doctor says the tests are fine but I don't feel fine.",
+      "response": "Thank you for putting that into words. What stands out is what you said about doctor says. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I've been putting off an appointment I know I need.",
+      "response": "Thank you for putting that into words. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "Managing this condition takes so much energy there's none left over.",
+      "response": "Thank you for putting that into words. What stands out is what you said about condition takes. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I went for a walk today for the first time in weeks.",
+      "response": "I'm listening. What stands out is what you said about walk today. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "Rent went up again and I've stopped opening my banking app.",
+      "response": "Thank you for putting that into words. What stands out is what you said about rent went. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I earn enough on paper and still feel one bad month from disaster.",
+      "response": "I'm listening. What stands out is what you said about month from disaster. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I said no to a trip with friends because of money and felt ashamed.",
+      "response": "I'm listening. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I paid off a debt this month and I'm scared to feel relieved.",
+      "response": "There's real lightness in how you're describing this. It sounds \u2014 tell me if this is off \u2014 a little hopeful. What made the difference this time?",
+      "score": 1.0
+    },
+    {
+      "prompt": "I can't shake the feeling that everyone will work out I'm a fraud.",
+      "response": "I'm listening. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I did something well and immediately assumed it was luck.",
+      "response": "I'm listening. What stands out is what you said about something well. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I hold everyone else to kinder standards than I hold myself.",
+      "response": "Thank you for putting that into words. What stands out is what you said about hold everyone else. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "Someone complimented my work and I argued with them about it.",
+      "response": "Thank you for putting that into words. What stands out is what you said about someone complimented. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I'm surrounded by people all day and still feel completely alone.",
+      "response": "That sounds isolating. What stands out is what you said about completely alone. I might be reading this wrong, but it sounds lonely. Who used to feel close, before this?",
+      "score": 1.0
+    },
+    {
+      "prompt": "I've cancelled on people so often they've stopped asking.",
+      "response": "Thank you for putting that into words. What stands out is what you said about stopped asking. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I moved cities for work and haven't made a single real friend.",
+      "response": "I'm listening. What stands out is what you said about single real friend. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I had a long conversation with a stranger today and felt human again.",
+      "response": "Thank you for putting that into words. What stands out is what you said about long conversation. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I can't seem to stick to any routine I set for myself.",
+      "response": "I'm listening. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I start strong for four days and then it all falls apart.",
+      "response": "I'm listening. What stands out is what you said about start strong. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I'm on my phone until 2am and I don't even enjoy it.",
+      "response": "I'm listening. What stands out is what you said about phone until. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I went to the gym twice this week, which is twice more than usual.",
+      "response": "Thank you for putting that into words. What stands out is what you said about week which. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I'm torn between a safe career move and a risky opportunity.",
+      "response": "I'm listening. What stands out is what you said about safe career move. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I feel like I'm waiting for my real life to start.",
+      "response": "I'm listening. What stands out is what you said about real life. Where would you like to start?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I had a good week for once and I'm scared it won't last.",
+      "response": "Thank you for putting that into words. What stands out is what you said about good week. If I'm hearing you right, there's something unresolved in this. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    },
+    {
+      "prompt": "I don't know what I want, only what I'm supposed to want.",
+      "response": "Thank you for putting that into words. What stands out is what you said about only what. What feels most important to say about it?",
+      "score": 0.6666666666666666
+    }
+  ]
+}

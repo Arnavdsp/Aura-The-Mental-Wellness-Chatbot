@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from aura import __version__
@@ -70,30 +71,74 @@ def _train(args: argparse.Namespace) -> int:
     return 0
 
 
+def _space_generator(space_id: str) -> Callable[[str], str]:
+    """Score a deployed Space end to end.
+
+    A local engine only exercises generation. Pointing the same harness at the
+    Space measures what a visitor actually gets — crisis screen, prompt assembly
+    and the model on real hardware — so a passing local score cannot hide a
+    deployment that behaves differently.
+    """
+    try:
+        from gradio_client import Client
+    except ImportError as exc:  # pragma: no cover - optional dependency
+        raise SystemExit(
+            "--space needs the gradio_client package: pip install -e '.[dev]'"
+        ) from exc
+
+    client = Client(space_id, httpx_kwargs={"timeout": 600})
+
+    def generate(prompt: str) -> str:
+        chat, _insights, _crisis = client.predict(
+            message={"text": prompt, "files": []}, history=[], api_name="/respond"
+        )
+        reply = chat[-1]["content"]
+        if isinstance(reply, list):  # Gradio 6 returns content as typed parts
+            reply = "".join(part.get("text", "") for part in reply)
+        return reply
+
+    return generate
+
+
 def _evaluate(args: argparse.Namespace) -> int:
-    """Score a checkpoint (or the running echo engine) on coaching behaviour."""
+    """Score a checkpoint, the echo engine, or a deployed Space."""
     import asyncio
 
     from aura.config import Settings
     from aura.engine.base import GenerationRequest
     from aura.engine.registry import build_engine
     from aura.safety import crisis_message, screen
-    from aura.training.evaluate import evaluate
+    from aura.training.evaluate import evaluate, screen_safety_cases
 
     settings = Settings(engine=args.engine, adapter_path=args.adapter)
-    engine = build_engine(settings)
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(engine.warmup())
 
-    def generate(prompt: str) -> str:
-        assessment = screen(prompt, region=settings.crisis_region)
-        if assessment.should_short_circuit:
-            return crisis_message(assessment)
-        return loop.run_until_complete(
-            engine.generate(
-                GenerationRequest(system_prompt=_eval_system_prompt(), user_text=prompt)
+    # The screen is a pure function, so its precision and recall are the same
+    # whatever generates the replies. Report it once, separately, rather than
+    # implying the model had anything to do with the result.
+    classification = screen_safety_cases(region=settings.crisis_region)
+    print(classification.render())
+    print()
+
+    engine = None
+    loop = None
+    if args.space:
+        generate = _space_generator(args.space)
+    else:
+        engine = build_engine(settings)
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(engine.warmup())
+
+        def generate(prompt: str) -> str:
+            assessment = screen(prompt, region=settings.crisis_region)
+            if assessment.should_short_circuit:
+                return crisis_message(assessment)
+            return loop.run_until_complete(
+                engine.generate(
+                    GenerationRequest(
+                        system_prompt=_eval_system_prompt(), user_text=prompt
+                    )
+                )
             )
-        )
 
     report = evaluate(generate)
     print(report.render())
@@ -101,9 +146,20 @@ def _evaluate(args: argparse.Namespace) -> int:
         Path(args.json).write_text(
             json.dumps(
                 {
+                    "target": args.space or args.engine,
                     "mean_score": report.mean_score,
                     "rates": report.rates(),
                     "safety_passed": report.passed_safety,
+                    "screen": {
+                        "precision": classification.precision,
+                        "recall": classification.recall,
+                        "f1": classification.f1,
+                        "exact_accuracy": classification.exact_accuracy,
+                        "true_positive": classification.true_positive,
+                        "false_positive": classification.false_positive,
+                        "false_negative": classification.false_negative,
+                        "true_negative": classification.true_negative,
+                    },
                     "responses": [
                         {"prompt": s.prompt, "response": s.response, "score": s.total}
                         for s in report.scores
@@ -112,8 +168,9 @@ def _evaluate(args: argparse.Namespace) -> int:
                 indent=2,
             )
         )
-    loop.run_until_complete(engine.shutdown())
-    loop.close()
+    if engine is not None and loop is not None:
+        loop.run_until_complete(engine.shutdown())
+        loop.close()
     return 0 if report.passed_safety else 1
 
 
@@ -160,6 +217,10 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate_cmd = sub.add_parser("evaluate", help="score coaching behaviour")
     evaluate_cmd.add_argument("--engine", default="auto", choices=("auto", "gemma", "echo"))
     evaluate_cmd.add_argument("--adapter", help="path to a trained LoRA adapter")
+    evaluate_cmd.add_argument(
+        "--space",
+        help="score a deployed Space instead (e.g. user/aura-wellness-coach)",
+    )
     evaluate_cmd.add_argument("--json", help="write the full report to this path")
     evaluate_cmd.set_defaults(func=_evaluate)
 

@@ -93,9 +93,15 @@ class GemmaEngine(CoachEngine):
             model = AutoModelForImageTextToText.from_pretrained(
                 settings.model_id,
                 torch_dtype=torch.bfloat16 if self._device == "cuda" else torch.float32,
-                device_map="auto" if self._device == "cuda" else None,
+                device_map=settings.device_map,
+                attn_implementation="sdpa",
             )
-            if self._device != "cuda":
+            # `.to()` is the placement a single GPU wants, and unlike a
+            # device_map it goes through the torch.cuda call that ZeroGPU's
+            # hijack intercepts — so this same path serves a plain GPU host and
+            # a ZeroGPU Space. accelerate has already placed the weights when a
+            # device_map was given, and moving them again would undo that.
+            if settings.device_map is None:
                 model = model.to(self._device)
 
         if settings.adapter_path:

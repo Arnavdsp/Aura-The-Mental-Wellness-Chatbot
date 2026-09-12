@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     top_k: int = 64
     repetition_penalty: float = 1.05
     device: str | None = None  # None -> auto ("cuda" if available else "cpu")
+    # Left unset the model is placed with `.to(device)`, which is what a single
+    # GPU wants and the only placement ZeroGPU's CUDA hijack can intercept. Set
+    # it ("auto", "balanced", …) to hand placement to accelerate instead, for
+    # sharding across several GPUs or offloading a model that does not fit.
+    device_map: str | None = None
 
     # -- modalities ------------------------------------------------------
     enable_vision: bool = True

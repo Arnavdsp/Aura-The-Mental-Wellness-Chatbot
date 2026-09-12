@@ -2,6 +2,8 @@
 
 **Gemma 3n · voice, text and images in · text and speech out**
 
+**[Try it live](https://huggingface.co/spaces/ADP123456/aura-wellness-coach)** — real Gemma 3n E4B on a ZeroGPU Space.
+
 Aura listens the way a good coach does. You can type, talk, or show it something.
 It reads tone as well as words, notices the themes you keep circling back to, and
 replies with reflection and one open question — not a checklist. When someone
@@ -132,7 +134,7 @@ src/aura/
 │   └── evaluate.py    # behavioural scoring
 └── web/               # index.html · styles.css · app.js (no build step)
 api/index.py           # Vercel serverless entrypoint
-deploy/                # Hugging Face Space + Render blueprints
+deploy/                # ZeroGPU Space (real Gemma 3n) + Docker/Render blueprints
 tests/                 # 140 tests, no GPU, no network
 notebooks/             # the original exploration notebooks
 ```
@@ -311,8 +313,24 @@ docker run -e PORT=7860 -p 7860:7860 aura    # as a platform would
 
 ### Free hosting
 
-All three of these are CPU-only on their free tiers, so all three run the echo
-engine. They differ in how they sleep and how you ship to them:
+**On a free Hugging Face account, ZeroGPU is the only hosting that runs real
+Gemma 3n** — and it is Gradio-only, so a Docker Space cannot use it. That Space
+is `deploy/spaces-gpu/`: a Gradio front end over the same coaching brain, with
+only generation on the GPU.
+
+```bash
+hf repos create <user>/aura --type space --space-sdk gradio --flavor zero-a10g --public
+deploy/spaces-gpu/push.sh <user>/aura
+```
+
+The crisis screen, affect estimate, topic graph and prompt assembly stay in the
+Space's main process; `@spaces.GPU` wraps `model.generate` and nothing else. So
+on a crisis match the model is never invoked — the guarantee is structural, not
+a matter of instruction-following. Measured on the live Space: ~7 s for a
+generated reply, ~0.9 s for a crisis reply.
+
+The CPU-only options below run the echo engine instead. Note that Docker and
+`cpu-basic` Spaces both require a paid HF plan; Render and Railway do not:
 
 | | Ship it with | Free-tier catch |
 |---|---|---|

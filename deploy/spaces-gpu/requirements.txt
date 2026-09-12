@@ -1,0 +1,12 @@
+# gradio, spaces and huggingface_hub are preinstalled and platform-managed.
+# torch is left unpinned so the ZeroGPU runtime supplies its own build.
+accelerate
+transformers
+timm
+torchvision
+librosa
+soundfile
+pydantic>=2.6
+pydantic-settings>=2.2
+numpy
+pillow

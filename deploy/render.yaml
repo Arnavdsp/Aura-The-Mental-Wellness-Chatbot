@@ -1,0 +1,33 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploy with: New → Blueprint, point it at this repo, set the blueprint path to
+# deploy/render.yaml. Render builds the root Dockerfile and injects PORT, which
+# the container binds to.
+#
+# The free plan spins the service down after ~15 minutes of inactivity, so the
+# first request after a quiet spell waits for a cold start. /api/health is cheap
+# and does not touch the engine, so it is safe to use as the health check.
+
+services:
+  - type: web
+    name: aura
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      # Free plans are CPU-only; Gemma 3n needs an accelerator. See the README.
+      - key: AURA_ENGINE
+        value: echo
+      - key: AURA_ENVIRONMENT
+        value: production
+      - key: AURA_LOG_JSON
+        value: "true"
+      - key: AURA_TTS_BACKEND
+        value: none
+      - key: AURA_ASR_BACKEND
+        value: none
+      # Same-origin by default. Set this to the UI's origin if you host the
+      # front end separately, e.g. https://aura.vercel.app
+      - key: AURA_CORS_ORIGINS
+        value: "*"

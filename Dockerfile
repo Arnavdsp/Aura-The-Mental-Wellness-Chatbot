@@ -28,10 +28,13 @@ RUN pip install --no-cache-dir -e ".${EXTRAS}"
 # src/ carries the packaged web UI at src/aura/web.
 COPY src/ ./src/
 
-# Run unprivileged.
-RUN useradd --create-home --uid 10001 aura && chown -R aura:aura /app
+# Run unprivileged. UID 1000 is what Hugging Face Spaces runs containers as, so
+# using it here means the same image works there without a permissions dance.
+RUN useradd --create-home --uid 1000 aura && chown -R aura:aura /app
 USER aura
 
+# PORT is what Render, Railway and Spaces set; AURA_PORT is the local default.
+# Both are read by the app, and the CMD below prefers PORT when it is present.
 ENV AURA_HOST=0.0.0.0 \
     AURA_PORT=8000 \
     AURA_ENVIRONMENT=production \
@@ -41,6 +44,7 @@ ENV AURA_HOST=0.0.0.0 \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD curl -fsS http://localhost:8000/api/health || exit 1
+  CMD curl -fsS "http://localhost:${PORT:-${AURA_PORT:-8000}}/api/health" || exit 1
 
-CMD ["uvicorn", "aura.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# `exec` so uvicorn is PID 1 and receives the platform's shutdown signal.
+CMD ["sh", "-c", "exec uvicorn aura.api.app:app --host 0.0.0.0 --port ${PORT:-${AURA_PORT:-8000}}"]

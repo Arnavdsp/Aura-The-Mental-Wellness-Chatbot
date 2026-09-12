@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -36,7 +36,10 @@ class Settings(BaseSettings):
     app_name: str = "Aura"
     environment: Literal["development", "staging", "production"] = "development"
     host: str = "0.0.0.0"
-    port: int = 8000
+    # Render, Railway, Fly and friends inject the port to bind as `PORT`, so
+    # accept that as well as `AURA_PORT` — otherwise the container listens on
+    # the wrong port and the platform reports the deploy as unhealthy.
+    port: int = Field(default=8000, validation_alias=AliasChoices("AURA_PORT", "PORT"))
     log_level: str = "INFO"
     log_json: bool = False
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])

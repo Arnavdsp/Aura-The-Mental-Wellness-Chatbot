@@ -132,7 +132,8 @@ src/aura/
 │   └── evaluate.py    # behavioural scoring
 └── web/               # index.html · styles.css · app.js (no build step)
 api/index.py           # Vercel serverless entrypoint
-tests/                 # 133 tests, no GPU, no network
+deploy/                # Hugging Face Space + Render blueprints
+tests/                 # 140 tests, no GPU, no network
 notebooks/             # the original exploration notebooks
 ```
 </details>
@@ -295,6 +296,58 @@ Hugging Face Spaces (GPU), Modal, Fly.io GPU machines, Cloud Run with GPU and a
 plain GPU VM all take this image as-is. Mount a volume at
 `/home/aura/.cache/huggingface` so weights survive restarts.
 
+### The container
+
+One image runs everywhere. It binds whatever port the platform hands it
+(`PORT`, falling back to `AURA_PORT`, then 8000), runs as UID 1000 — the uid
+Hugging Face Spaces uses — and carries a health check on `/api/health` that
+never touches the engine, so a platform can probe it during model download.
+
+```bash
+docker build -t aura .
+docker run -p 8000:8000 aura                 # local
+docker run -e PORT=7860 -p 7860:7860 aura    # as a platform would
+```
+
+### Free hosting
+
+All three of these are CPU-only on their free tiers, so all three run the echo
+engine. They differ in how they sleep and how you ship to them:
+
+| | Ship it with | Free-tier catch |
+|---|---|---|
+| **Hugging Face Spaces** | `deploy/huggingface/push.sh <user>/<space>` | Sleeps after 48h idle; wakes on the next visit |
+| **Render** | Blueprint → `deploy/render.yaml` | Spins down after ~15 min idle; cold start on the next request |
+| **Railway** | Auto-detects the Dockerfile; set no port | Trial credits, not a permanent free tier |
+
+Spaces needs a README with its own YAML front matter, which would be noise in
+this one — so `deploy/huggingface/push.sh` assembles the Space from the tracked
+files plus `deploy/huggingface/README.md` and pushes it:
+
+```bash
+huggingface-cli login
+deploy/huggingface/push.sh your-name/aura     # → https://your-name-aura.hf.space
+```
+
+### Hosting the UI apart from the API
+
+The server ships the UI, so the single-origin case needs no configuration. When
+the front end lives somewhere else — a static host in front of a Space — point
+it at the backend and let that origin through CORS:
+
+```bash
+# on the API
+AURA_CORS_ORIGINS=https://aura.vercel.app
+```
+
+```html
+<!-- in the page, before app.js loads -->
+<meta name="aura-api-base" content="https://your-name-aura.hf.space" />
+```
+
+`?api=https://…` on the URL does the same thing per visit, which is handy for a
+demo link. Same-origin remains the default when none of these is set.
+
 ### Vercel
 
 Vercel deploys, and it is genuinely useful for showing the interface — but be
@@ -330,7 +383,7 @@ change standing between this and a stateless-friendly deployment.
 
 ```bash
 make dev        # install with dev tooling
-make test       # 133 tests, ~3s, no GPU or network
+make test       # 140 tests, ~3s, no GPU or network
 make lint       # ruff
 make evaluate   # behavioural scoring
 make serve      # hot reload

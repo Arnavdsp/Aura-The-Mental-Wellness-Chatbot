@@ -11,6 +11,29 @@
 
 const $ = (id) => document.getElementById(id);
 
+/* ── Where the API lives ───────────────────────────────────────────────────
+ *
+ * The server normally ships this UI itself, so same-origin is the default and
+ * nothing needs configuring. When the UI is hosted apart from the API — a
+ * static host in front of a Hugging Face Space, say — point it at the backend
+ * with any one of:
+ *
+ *   ?api=https://user-space.hf.space          (per-visit, good for a demo link)
+ *   <meta name="aura-api-base" content="…">   (baked into the page)
+ *   window.AURA_API_BASE = "…"                (set before this module loads)
+ *
+ * The backend must allow the UI's origin via AURA_CORS_ORIGINS.
+ */
+const API_BASE = (
+  new URLSearchParams(location.search).get("api") ||
+  window.AURA_API_BASE ||
+  document.querySelector('meta[name="aura-api-base"]')?.content ||
+  ""
+).replace(/\/+$/, "");
+
+/** Resolve an API path against the configured backend. */
+const api = (path) => `${API_BASE}${path}`;
+
 /* ── State ─────────────────────────────────────────────────────────────── */
 
 const state = {
@@ -263,7 +286,9 @@ function attachAudioPlayer(node, url) {
   player.className = "msg__audio";
   player.controls = true;
   player.preload = "none";
-  player.src = url;
+  // The server returns a root-relative path, which has to resolve against the
+  // API rather than the page when the two are hosted separately.
+  player.src = api(url);
   node.body.insertBefore(player, node.meta);
   player.play().catch(() => { /* autoplay blocked — the control is still there */ });
 }
@@ -351,7 +376,7 @@ async function submitMessage(text) {
   let sawToken = false;
 
   try {
-    const response = await fetch("/api/chat/stream", {
+    const response = await fetch(api("/api/chat/stream"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -723,7 +748,7 @@ function renderTopics(graph) {
 async function refreshInsights() {
   if (!state.sessionId) return;
   try {
-    const response = await fetch(`/api/sessions/${state.sessionId}`);
+    const response = await fetch(api(`/api/sessions/${state.sessionId}`));
     if (!response.ok) return;
     const data = await response.json();
     drawSparkline(data.insights.mood_trend);
@@ -735,7 +760,7 @@ async function refreshInsights() {
 
 async function loadResources() {
   try {
-    const response = await fetch("/api/resources");
+    const response = await fetch(api("/api/resources"));
     const resources = await response.json();
     el.resources.innerHTML = resources
       .map((r) => {
@@ -752,7 +777,7 @@ async function loadHealth() {
   const dot = el.status.querySelector(".status__dot");
   const label = el.status.querySelector(".status__label");
   try {
-    const response = await fetch("/api/health");
+    const response = await fetch(api("/api/health"));
     const health = await response.json();
     state.health = health;
     dot.dataset.state = health.status === "ok" ? "ok" : "degraded";
@@ -846,7 +871,7 @@ function init() {
 
   el.clear.addEventListener("click", async () => {
     if (state.sessionId) {
-      await fetch(`/api/sessions/${state.sessionId}`, { method: "DELETE" }).catch(() => {});
+      await fetch(api(`/api/sessions/${state.sessionId}`), { method: "DELETE" }).catch(() => {});
     }
     state.sessionId = null;
     el.thread.innerHTML = "";

@@ -15,15 +15,18 @@ describes real danger, it stops coaching and puts a human being in front of them
 ---
 
 ## Run it in 60 seconds
-
 ```bash
-git clone https://github.com/arnavdsp/Gemma-3n-Hackathon.git
+git clone https://github.com/Arnavdsp/Gemma-3n-Hackathon.git
 cd Gemma-3n-Hackathon
+git checkout claude/wellness-coach-multimodal-gj4r65
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e .
 aura serve
 ```
+Open http://localhost:8000. That's the whole setup.
 
-Open <http://localhost:8000>.
+You get the real UI, the real API, streaming, image attachments, the affect estimator, the topic graph and the crisis screening — all of it. What's different is the engine behind it: a reflective-listening coach built from the same principles as the system prompt (mirror the person's words, name the feeling tentatively, ask one open question). It has structure but no world knowledge. Good for demoing the product and developing against; it won't hold a genuinely intelligent conversation.
 
 That works on any laptop with no GPU, no model download and no API key, because
 the base install ships a **reflective-listening fallback engine** (see

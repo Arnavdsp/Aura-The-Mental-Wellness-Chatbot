@@ -30,7 +30,9 @@ You get the real UI, the real API, streaming, image attachments, the affect esti
 
 That works on any laptop with no GPU, no model download and no API key, because
 the base install ships a **reflective-listening fallback engine** (see
-[Engines](#engines)). To run the real thing:
+[Engines](#engines)). 
+
+To run the real thing:
 
 ```bash
 pip install -e '.[ml]'          # torch + transformers
@@ -42,7 +44,7 @@ Or with Docker:
 ```bash
 docker compose up --build       # http://localhost:8000
 ```
-
+Or with Hugginface: https://huggingface.co/spaces/ADP123456/aura-wellness-coach
 ---
 
 ## What it does
